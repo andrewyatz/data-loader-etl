@@ -1,0 +1,358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ETL config v2",
+  "type": "object",
+  "required": ["filters", "views"],
+  "properties": {
+    "filters": {
+      "type": "array",
+      "description": "Shared filter definitions, referenced by id from views",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/filter" }
+    },
+    "views": {
+      "type": "array",
+      "description": "View definitions controlling what is displayed",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/view" }
+    },
+    "columns": {
+      "type": "object",
+      "description": "Per-dataset column overrides. Keys are dataset names.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Column overrides keyed by column name",
+        "additionalProperties": { "$ref": "#/$defs/column" }
+      }
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "filter": {
+      "type": "object",
+      "required": ["id", "label", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Filter identifier. Also used as the default column name to query unless query_columns.column is specified."
+        },
+        "label": {
+          "type": "string",
+          "description": "Display label for the filter"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["select_list", "select", "select_in", "list_contains", "range", "location"],
+          "description": "Type of filter"
+        },
+        "match": {
+          "type": "string",
+          "enum": ["exact", "prefix"],
+          "description": "Match method for select and select_in types"
+        },
+        "filter_labels": {
+          "type": "string",
+          "description": "SQL expression to generate display labels from distinct values"
+        },
+        "min": {
+          "type": "number",
+          "description": "Override the computed minimum for range filters"
+        },
+        "max": {
+          "type": "number",
+          "description": "Override the computed maximum for range filters"
+        },
+        "query_columns": {
+          "type": "object",
+          "description": "Specifies which columns to query. For single-column filters use {\"column\": \"name\"} to override the default (filter id). For location filters, maps semantic roles to column names."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "select_list" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["filter_labels"],
+            "properties": {
+              "query_columns": { "$ref": "#/$defs/single_query_column" }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["match"] },
+                { "required": ["min"] },
+                { "required": ["max"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "select" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["match"],
+            "properties": {
+              "query_columns": { "$ref": "#/$defs/single_query_column" }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["filter_labels"] },
+                { "required": ["min"] },
+                { "required": ["max"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "select_in" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["match"],
+            "properties": {
+              "match": { "const": "exact" },
+              "query_columns": { "$ref": "#/$defs/single_query_column" }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["filter_labels"] },
+                { "required": ["min"] },
+                { "required": ["max"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "list_contains" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": {
+              "query_columns": { "$ref": "#/$defs/single_query_column" }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["match"] },
+                { "required": ["filter_labels"] },
+                { "required": ["min"] },
+                { "required": ["max"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "range" } },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": {
+              "query_columns": { "$ref": "#/$defs/single_query_column" }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["match"] },
+                { "required": ["filter_labels"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "location" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["query_columns"],
+            "properties": {
+              "query_columns": { "$ref": "#/$defs/location_query_columns" }
+            },
+            "not": {
+              "anyOf": [
+                { "required": ["match"] },
+                { "required": ["filter_labels"] },
+                { "required": ["min"] },
+                { "required": ["max"] }
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    "single_query_column": {
+      "type": "object",
+      "description": "Override which column to query when the filter id differs from the column name",
+      "required": ["column"],
+      "properties": {
+        "column": {
+          "type": "string",
+          "description": "Actual column name in the dataset to query against"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "location_query_columns": {
+      "type": "object",
+      "description": "Maps semantic roles to actual column names for location overlap queries",
+      "required": ["region", "start", "end"],
+      "properties": {
+        "region": {
+          "type": "string",
+          "description": "Column representing the chromosome/region"
+        },
+        "start": {
+          "type": "string",
+          "description": "Column representing the feature start position"
+        },
+        "end": {
+          "type": "string",
+          "description": "Column representing the feature end position"
+        },
+        "strand": {
+          "type": "string",
+          "description": "Column representing strand (+/-). Omit if not available."
+        },
+        "bin": {
+          "type": "string",
+          "description": "Column representing UCSC extended bin index. Omit if not available."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "view": {
+      "type": "object",
+      "required": ["url_name", "id", "name", "dataset", "filters", "columns"],
+      "properties": {
+        "id" : {
+          "type": "string",
+          "description": "The unique string identifier for this view"
+        },
+        "url_name": {
+          "type": "string",
+          "description": "URL path segment for this view"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name for this view"
+        },
+        "dataset": {
+          "type": "string",
+          "description": "Which dataset this view queries"
+        },
+        "include_remaining_columns": {
+          "type": "boolean",
+          "description": "If true, append all remaining dataset columns not listed in columns",
+          "default": false
+        },
+        "filters": {
+          "type": "array",
+          "description": "Filter references for this view",
+          "items": { "$ref": "#/$defs/view_filter" }
+        },
+        "columns": {
+          "type": "array",
+          "description": "Columns to display, ordered by display rank",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/view_column" }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "view_filter": {
+      "type": "object",
+      "required": ["filter_id"],
+      "properties": {
+        "filter_id": {
+          "type": "string",
+          "description": "References a filter id from the top-level filters array"
+        },
+        "primary": {
+          "type": "boolean",
+          "description": "If true, this filter is displayed prominently in the UI",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "view_column": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Column name from the dataset"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "If true, column is visible by default. Defaults to true.",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "column": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Override display label for this column"
+        },
+        "sortable": {
+          "type": "boolean",
+          "description": "Whether sorting is allowed on this column"
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "If true, column is excluded from the interface entirely"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["link", "array-link", "labelled-link", "string"],
+          "description": "Link rendering type"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL template where {} is replaced with cell content"
+        },
+        "delimiter": {
+          "type": "string",
+          "description": "Delimiter for splitting array-link values"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "link" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["url"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "array-link" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["url", "delimiter"]
+          }
+        }
+      ]
+    }
+  }
+}

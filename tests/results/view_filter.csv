@@ -1,0 +1,3 @@
+view_filter_id,view_id,id,label,filter_type,match_type,is_primary,rank,min,max,query_columns
+1,1,id,ID,select_list,,true,1,,,
+2,1,class,Class,select_list,,false,2,,,

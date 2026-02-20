@@ -1,0 +1,25 @@
+alpha_v*/*
+
+# IDE artifacts
+.idea
+
+# Python directories
+__pycache__
+venv
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Data files
+*.parquet
+*.duckdb
+/v1
+
+# Environemnt variables
+.env
+.env.test
+
+# Local settings
+.vscode/settings.json
+.DS_Store

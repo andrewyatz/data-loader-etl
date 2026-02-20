@@ -1,0 +1,12 @@
+[
+    {
+        "name":"test",
+        "path":"example/example.csv",
+        "create_columns": [
+            {
+                "name":"gen_measurement",
+                "command":"TRIM(CONCAT(measurement, ' ', unit))"
+            }
+        ]
+    }
+]

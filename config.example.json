@@ -1,0 +1,110 @@
+{
+    "filters": [
+        {
+            "id" : "id", 
+            "label": "ID",
+            "type": "select_in",
+            "match": "exact"
+        },
+        {
+            "id": "species",
+            "label": "Species",
+            "type": "select",
+            "match": "exact"
+        },
+        {
+            "id": "accession_search",
+            "label": "Genome accession",
+            "type": "select",
+            "match": "prefix",
+            "query_columns" : {
+                "column" : "genome_accession"
+            }
+        },
+        {
+            "id": "biotype",
+            "label": "Biotype",
+            "type": "select_list",
+            "filter_labels": "upper(biotype)"
+        },
+        {
+            "id": "taxonomy_ancestor",
+            "label": "Taxonomy ancestor",
+            "type": "list_contains"
+        },
+        {
+            "id": "transcript_count",
+            "label": "Transcript count",
+            "type": "range",
+            "min" : 0
+        },
+        {
+            "id": "gen_location",
+            "label": "Genomic Location",
+            "type": "location",
+            "query_columns": {
+                "region": "region",
+                "start": "region_start",
+                "end": "region_end",
+                "strand": "strand",
+                "bin": "_bin"
+            }
+        }
+    ],
+    "views": [
+        {
+            "url_name": "genes",
+            "name": "Genes",
+            "dataset": "genes",
+            "include_remaining_columns": true,
+            "filters": [
+                { "filter_id" : "id", "primary" : true },
+                { "filter_id" : "species" },
+                { "filter_id" : "accession_search" },
+                { "filter_id" : "gen_location" },
+                { "filter_id" : "biotype" },
+                { "filter_id" : "taxonomy_ancestor" },
+                { "filter_id" : "transcript_count" }
+            ],
+            "columns": [
+                {  "name": "id", "enabled" : true},
+                {  "name": "species" },
+                {  "name": "genome_accession" },
+                {  "name": "gen_location" },
+                {  "name": "biotype" },
+                {  "name": "transcript_count" },
+                {  "name": "publications" }
+            ]
+        }
+    ],
+    "columns": {
+        "genes": {
+            "id": {
+                "sortable": false,
+                "label": "ID",
+                "type": "link",
+                "url": "https://resolver.ensembl.org/id/{}"
+            },
+            "genome_accession" : {
+                "sortable": false,
+                "type": "link",
+                "url": "https://www.ebi.ac.uk/ena/browser/view/{}"
+            },
+            "gen_evidence_accession":{
+            	"label":"Evidence accession",
+            	"sortable": false,
+            	"type":"labelled-link"
+            },
+            "publications" : {
+                "sortable": false,
+                "type":"array-link",
+                "delimiter":";",
+                "url":"https://europepmc.org/article/MED/{}"
+            },
+            "_bin":{
+            	"label":"UCSC binning index",
+				"hidden":true
+            }
+        }
+    }
+}
