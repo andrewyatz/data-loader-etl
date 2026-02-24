@@ -4,7 +4,14 @@ from pathlib import Path
 
 import duckdb
 
-from etl.models import Dataset, Filter, View, ViewColumn, ViewFilter
+from etl.models import (
+    Dataset,
+    Filter,
+    View,
+    ViewColumn,
+    ViewFilter,
+    ViewFilterGroup,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,21 +49,53 @@ class ViewsProcessor:
         self.datasets = datasets
         self.release_path = release_path
         self.warn_max = warn_max
-        self._filter_rank = 1
-
-    def next_filter_rank(self) -> int:
-        current = self._filter_rank
-        self._filter_rank = current + 1
-        return current
 
     def run(self) -> None:
         with duckdb.connect() as conn:
             for view in self.views:
                 dataset = self.get_dataset(view.dataset)
-                for view_filter in view.filters:
-                    self.process_filter(view, view_filter, dataset.parquet_path, conn)
+                normalised_groups = self.normalise_to_groups(view)
+                group_rank = 1
+                for group in normalised_groups:
+                    group.rank = group_rank
+                    group_rank += 1
+                    filter_rank = 1
+                    for view_filter in group.filters:
+                        self.process_filter(
+                            view, view_filter, dataset.parquet_path, conn
+                        )
+                        view_filter.rank = filter_rank
+                        filter_rank += 1
+                    # For auto-wrapped groups (size 1), use the filter's
+                    # resolved label as the group label
+                    if len(group.filters) == 1 and group.filters[0].label:
+                        group.group_label = group.filters[0].label
+                # Replace view.filters with the normalised groups
+                view.filters = normalised_groups
                 self.populate_additional_columns(view)
                 self.write_view(view)
+
+    def normalise_to_groups(self, view: View) -> list[ViewFilterGroup]:
+        """Wrap standalone ViewFilters into single-filter ViewFilterGroups.
+
+        For standalone filters, the group inherits the filter's id and label
+        (label is resolved later during process_filter via copy_from_filter).
+        """
+        groups: list[ViewFilterGroup] = []
+        for entry in view.filters:
+            if isinstance(entry, ViewFilterGroup):
+                groups.append(entry)
+            else:
+                # Auto-wrap: group_id and group_label will be set after
+                # the filter definition is resolved
+                groups.append(
+                    ViewFilterGroup(
+                        group_id=entry.filter_id,
+                        group_label=entry.filter_id,
+                        filters=[entry],
+                    )
+                )
+        return groups
 
     def process_filter(
         self,
@@ -81,7 +120,6 @@ class ViewsProcessor:
                 )
             view_filter.filter_values = filter_values
         view_filter.copy_from_filter(filter_definition)
-        view_filter.rank = self.next_filter_rank()
 
     def get_filter_definition(self, view: View, view_filter: ViewFilter) -> Filter:
         for filter in self.filters:

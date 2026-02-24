@@ -21,8 +21,8 @@
             "url_name":"test",
             "include_remaining_columns" : true,
             "filters" : [
-                { "filter_id" : "id", "primary" : true },
-                { "filter_id" : "class", "primary" : false }
+                { "filter_id" : "id" },
+                { "filter_id" : "class" }
             ],
               "columns":[
                   { "name": "id", "enabled":true },

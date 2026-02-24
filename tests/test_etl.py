@@ -51,6 +51,7 @@ def test_run_etl(
         "column_def",
         "view",
         "view_column",
+        "view_filter_group",
         "view_filter",
         "view_filter_value",
     ]

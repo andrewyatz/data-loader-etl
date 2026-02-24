@@ -89,8 +89,16 @@ The query finds overlapping features where the feature start is <= the query end
         "dataset": "dataset_name",
         "include_remaining_columns": true,
         "filters": [
-            { "filter_id": "column_one", "primary": true },
-            { "filter_id": "date" }
+            { "filter_id": "column_one" },
+            { "filter_id": "date" },
+            {
+                "group_id": "search",
+                "group_label": "Search",
+                "filters": [
+                    { "filter_id": "name" },
+                    { "filter_id": "category" }
+                ]
+            }
         ],
         "columns": [
             { "name": "column_one" },
@@ -114,12 +122,45 @@ Views configure what is presented to the user and differentiate content from the
 
 #### View filters
 
-Each entry in the view's `filters` array references a top-level filter by its `id`:
+Each entry in the view's `filters` array is either an individual filter reference or a filter group.
+
+**Individual filter reference:**
 
 | Attribute | Required | Description |
 |-----------|----------|-------------|
 | `filter_id` | Yes | References a filter `id` from the top-level `filters` array |
-| `primary` | No | If `true`, this filter is displayed prominently in the UI. Defaults to `false` |
+
+A standalone filter is automatically wrapped into a group of size 1, where the group inherits the filter's `id` and `label`.
+
+**Filter group** — groups multiple filters together so the frontend can render them on a single panel:
+
+```json
+{
+    "group_id": "gene_properties",
+    "group_label": "Gene Properties",
+    "filters": [
+        { "filter_id": "species" },
+        { "filter_id": "transcript_count" }
+    ]
+}
+```
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `group_id` | Yes | Unique identifier for this group within the view |
+| `group_label` | Yes | Display label for the group |
+| `filters` | Yes | Array of individual filter references. Order determines rank within the group |
+
+Groups are a view-level concern — the same filter definitions can be grouped differently across views.
+
+#### Ranking
+
+Display order is determined by two levels of ranking:
+
+1. **Group rank** — position of the group (or standalone filter) in the view's `filters` array determines which group appears first
+2. **Filter rank** — position within a group's `filters` array determines filter order within that group
+
+In the database, groups are stored in `view_filter_group` with their rank, and filters in `view_filter` reference their group via `view_filter_group_id` with a within-group rank.
 
 #### View columns
 

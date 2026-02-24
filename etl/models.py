@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Union
 
 from pydantic import BaseModel
 
@@ -47,7 +47,6 @@ class Filter(BaseModel):
 
 class ViewFilter(BaseModel):
     filter_id: str
-    primary: bool = False
 
     # Attributes we copy across from the Filter object definition above
     # which is why we're not very tight on the defs
@@ -71,6 +70,13 @@ class ViewFilter(BaseModel):
                 setattr(self, key, value)
 
 
+class ViewFilterGroup(BaseModel):
+    group_id: str
+    group_label: str
+    rank: int | None = None
+    filters: list[ViewFilter]
+
+
 class ViewColumn(BaseModel):
     name: str
     enabled: bool = True
@@ -83,7 +89,7 @@ class View(BaseModel):
     name: str
     dataset: str
     include_remaining_columns: bool = False
-    filters: list[ViewFilter]
+    filters: list[Union[ViewFilterGroup, ViewFilter]]
     columns: list[ViewColumn]
 
 

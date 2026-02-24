@@ -5,7 +5,7 @@ from typing import Any, Self
 
 import duckdb
 
-from etl.models import Dataset, View
+from etl.models import Dataset, View, ViewFilterGroup
 
 logger = logging.getLogger(__name__)
 
@@ -82,36 +82,45 @@ class DatabaseConfig(BaseDatabase):
             (view_db_id, view.id, view.name, view.url_name, dataset_db_id),
         )
 
-        # Write all filters out
-        for view_filter in view.filters:
-            view_filter_db_id = self.next_id("view_filter")
-            filter_sql = "INSERT INTO view_filter (view_filter_id, view_id, id, label, filter_type, match_type, is_primary, rank, min, max, query_columns) VALUES (?,?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
-            filter_params = (
-                view_filter_db_id,
-                view_db_id,
-                view_filter.filter_id,
-                view_filter.label,
-                view_filter.type,
-                view_filter.match,
-                view_filter.primary,
-                view_filter.rank,
-                view_filter.min,
-                view_filter.max,
-                view_filter.query_columns,
+        # Write filter groups and their filters
+        # After view processing, view.filters is a list[ViewFilterGroup]
+        for group in view.filters:
+            assert isinstance(group, ViewFilterGroup)
+            group_db_id = self.next_id("view_filter_group")
+            group_sql = "INSERT INTO view_filter_group (view_filter_group_id, view_id, id, label, rank) VALUES (?,?,?,?,?)"  # noqa: E501
+            conn.execute(
+                group_sql,
+                (group_db_id, view_db_id, group.group_id, group.group_label, group.rank),
             )
-            conn.execute(filter_sql, filter_params)
-            if (
-                view_filter.type == "select_list"
-                and view_filter.filter_values is not None
-            ):
-                for value in view_filter.filter_values:
-                    value_sql = "INSERT INTO view_filter_value (view_filter_id, value, label) VALUES (?,?,?)"  # noqa: E501
-                    value_params = (
-                        view_filter_db_id,
-                        value["value"],
-                        value["label"],
-                    )
-                    conn.execute(value_sql, value_params)
+
+            for view_filter in group.filters:
+                view_filter_db_id = self.next_id("view_filter")
+                filter_sql = "INSERT INTO view_filter (view_filter_id, view_filter_group_id, id, label, filter_type, match_type, rank, min, max, query_columns) VALUES (?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
+                filter_params = (
+                    view_filter_db_id,
+                    group_db_id,
+                    view_filter.filter_id,
+                    view_filter.label,
+                    view_filter.type,
+                    view_filter.match,
+                    view_filter.rank,
+                    view_filter.min,
+                    view_filter.max,
+                    view_filter.query_columns,
+                )
+                conn.execute(filter_sql, filter_params)
+                if (
+                    view_filter.type == "select_list"
+                    and view_filter.filter_values is not None
+                ):
+                    for value in view_filter.filter_values:
+                        value_sql = "INSERT INTO view_filter_value (view_filter_id, value, label) VALUES (?,?,?)"  # noqa: E501
+                        value_params = (
+                            view_filter_db_id,
+                            value["value"],
+                            value["label"],
+                        )
+                        conn.execute(value_sql, value_params)
 
         # Write the columns for the view and link
         for column in view.columns:

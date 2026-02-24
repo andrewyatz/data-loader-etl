@@ -58,13 +58,25 @@
             "dataset": "genes",
             "include_remaining_columns": true,
             "filters": [
-                { "filter_id" : "id", "primary" : true },
-                { "filter_id" : "species" },
-                { "filter_id" : "accession_search" },
-                { "filter_id" : "gen_location" },
-                { "filter_id" : "biotype" },
-                { "filter_id" : "taxonomy_ancestor" },
-                { "filter_id" : "transcript_count" }
+                {
+                    "group_id": "gene_properties",
+                    "group_label": "Gene Properties",
+                    "filters": [
+                        { "filter_id" : "id" },
+                        { "filter_id" : "species" },
+                        { "filter_id" : "taxonomy_ancestor" },
+                        { "filter_id" : "transcript_count" }
+                    ]
+                },
+                {
+                    "group_id": "coordinates",
+                    "group_label": "Coordinates",
+                    "filters": [
+                        { "filter_id" : "accession_search" },
+                        { "filter_id" : "gen_location" }
+                    ]
+                },
+                { "filter_id" : "biotype" }
             ],
             "columns": [
                 {  "name": "id", "enabled" : true},

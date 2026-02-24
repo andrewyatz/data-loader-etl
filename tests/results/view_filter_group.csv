@@ -1,0 +1,4 @@
+view_filter_group_id,view_id,id,label,rank
+1,1,id,ID,1
+2,1,class,Class,2
+3,1,search_group,Search,3

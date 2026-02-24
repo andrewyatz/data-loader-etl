@@ -256,8 +256,13 @@
         },
         "filters": {
           "type": "array",
-          "description": "Filter references for this view",
-          "items": { "$ref": "#/$defs/view_filter" }
+          "description": "Filter references for this view. Items can be individual filters or filter groups.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/view_filter" },
+              { "$ref": "#/$defs/filter_group" }
+            ]
+          }
         },
         "columns": {
           "type": "array",
@@ -276,11 +281,28 @@
         "filter_id": {
           "type": "string",
           "description": "References a filter id from the top-level filters array"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "filter_group": {
+      "type": "object",
+      "required": ["group_id", "group_label", "filters"],
+      "properties": {
+        "group_id": {
+          "type": "string",
+          "description": "Unique identifier for this filter group within the view"
         },
-        "primary": {
-          "type": "boolean",
-          "description": "If true, this filter is displayed prominently in the UI",
-          "default": false
+        "group_label": {
+          "type": "string",
+          "description": "Display label for this filter group"
+        },
+        "filters": {
+          "type": "array",
+          "description": "Filters within this group, ordered by display rank",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/view_filter" }
         }
       },
       "additionalProperties": false

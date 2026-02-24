@@ -28,21 +28,31 @@ CREATE TABLE "view" (
     FOREIGN KEY (dataset_id) REFERENCES dataset(dataset_id)
 );
 
--- Filter definitions linked to a view
+-- Filter groups linked to a view
+CREATE TABLE view_filter_group (
+    view_filter_group_id INTEGER PRIMARY KEY,
+    view_id INTEGER NOT NULL,
+    "id" VARCHAR NOT NULL,
+    "label" VARCHAR NOT NULL,
+    rank INTEGER NOT NULL,
+    FOREIGN KEY (view_id) REFERENCES view(view_id),
+    UNIQUE(view_id, "id")
+);
+
+-- Filter definitions linked to a view via a group
 CREATE TABLE view_filter (
     view_filter_id INTEGER PRIMARY KEY,
-    view_id INTEGER NOT NULL,
+    view_filter_group_id INTEGER NOT NULL,
     "id" VARCHAR NOT NULL,
     "label" VARCHAR NOT NULL,
     filter_type VARCHAR NOT NULL,
     match_type VARCHAR,
-    is_primary BOOLEAN NOT NULL DEFAULT false,
     rank INTEGER NOT NULL,
     "min" DOUBLE,
     "max" DOUBLE,
     query_columns JSON,
     UNIQUE("id"),
-    FOREIGN KEY (view_id) REFERENCES view(view_id)
+    FOREIGN KEY (view_filter_group_id) REFERENCES view_filter_group(view_filter_group_id)
 );
 
 -- Pre-computed filter values (only populated for select_list type)
@@ -79,8 +89,10 @@ SELECT
     v.url_name AS view_url_name,
     v."name" AS view_name,
     d."name" AS dataset_name,
+    vfg."id" AS group_id,
+    vfg."label" AS group_label,
+    vfg.rank AS group_rank,
     vf.rank AS filter_rank,
-    vf.is_primary,
     vf.view_filter_id,
     vf."id" AS filter_name,
     vf."label" AS filter_label,
@@ -90,9 +102,10 @@ SELECT
     vf."max",
     vf.query_columns
 FROM view_filter vf
-    JOIN "view" v ON vf.view_id = v.view_id
+    JOIN view_filter_group vfg ON vf.view_filter_group_id = vfg.view_filter_group_id
+    JOIN "view" v ON vfg.view_id = v.view_id
     JOIN dataset d ON v.dataset_id = d.dataset_id
-ORDER BY v.view_id, vf.rank;
+ORDER BY v.view_id, vfg.rank, vf.rank;
 
 -- Convenience view: resolves view columns with their metadata
 CREATE VIEW column_config AS
