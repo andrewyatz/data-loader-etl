@@ -23,3 +23,4 @@ venv
 # Local settings
 .vscode/settings.json
 .DS_Store
+.claude
