@@ -1,5 +1,5 @@
-view_filter_id,view_filter_group_id,id,label,filter_type,match_type,rank,min,max,query_columns
-1,1,id,ID,select_list,,1,,,
-2,2,class,Class,select_list,,1,,,
-3,3,class_search,Class search,select,exact,1,,,
-4,3,start,Start,range,,2,0.0,,
+view_filter_id,view_filter_group_id,id,label,filter_type,match_type,rank,min,max,query_columns,regex
+1,1,id,ID,select_list,,1,,,,
+2,2,class,Class,select_list,,1,,,,
+3,3,class_search,Class search,select,exact,1,,,,
+4,3,start,Start,range,,2,0.0,,,

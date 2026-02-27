@@ -1,4 +1,4 @@
-"""Pydantic models for config.json and data.json, aligned with schema v3."""
+"""Pydantic models for config.json and data.json, aligned with schema v2."""
 
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ class Filter(BaseModel):
     min: float | None = None
     max: float | None = None
     query_columns: SingleQueryColumn | LocationQueryColumns | None = None
+    regex: str | None = None
 
     @property
     def target_column(self) -> str:
@@ -63,6 +64,7 @@ class ViewFilter(BaseModel):
     rank: int | None = None
     filter_values: list[dict[str, str]] | None = None
     query_columns: SingleQueryColumn | LocationQueryColumns | None = None
+    regex: str | None = None
 
     def copy_from_filter(self, filter: Filter) -> None:
         for key, value in filter.model_dump(exclude_none=True).items():
@@ -81,13 +83,20 @@ class ViewColumn(BaseModel):
     name: str
     enabled: bool = True
     rank: int | None = None
+    # Populated during processing from dataset introspection + config overrides
+    label: str | None = None
+    sortable: bool = True
+    hidden: bool = False
+    type: Literal["link", "array-link", "labelled-link", "string"] = "string"
+    url: str | None = None
+    delimiter: str | None = None
 
 
 class View(BaseModel):
     url_name: str
     id: str
     name: str
-    dataset: str
+    source: str
     include_remaining_columns: bool = False
     filters: list[Union[ViewFilterGroup, ViewFilter]]
     columns: list[ViewColumn]
@@ -112,7 +121,7 @@ class Column(BaseModel):
 class Config(BaseModel):
     filters: list[Filter]
     views: list[View]
-    columns: dict[str, dict[str, Column]] = {}
+    columns: dict[str, dict[str, Column]] = {}  # keyed by view id
 
     def get_filter(self, filter_id: str) -> Filter:
         for f in self.filters:

@@ -17,7 +17,7 @@
         {
             "id" : "test_view",
             "name":"Test data set",
-            "dataset":"test",
+            "source":"test",
             "url_name":"test",
             "include_remaining_columns" : true,
             "filters" : [
@@ -32,7 +32,7 @@
         }
     ],
     "columns":{
-        "test":{
+        "test_view":{
             "id":{
                 "sortable": false,
                 "label" : "ID",

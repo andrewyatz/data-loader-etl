@@ -5,7 +5,7 @@ from typing import Any, Self
 
 import duckdb
 
-from etl.models import Dataset, View, ViewFilterGroup
+from etl.models import View, ViewFilterGroup
 
 logger = logging.getLogger(__name__)
 
@@ -32,54 +32,34 @@ class BaseDatabase:
 
 class DatabaseConfig(BaseDatabase):
 
+    def __init__(
+        self,
+        release_path: Path,
+        release: str,
+        views: list[View],
+        schema_version: str = schema_version,
+    ):
+        BaseDatabase.__init__(self, release_path, release)
+        self.views = views
+        self.schema_version = schema_version
+        self.ids: dict[str, int] = {}
+
     def run(self) -> None:
         self.load_schema()
-        for dataset in self.datasets:
-            logging.info(f"Processing dataset {dataset.name} and columns")
-            self.write_dataset(dataset)
-            logging.info("Finished")
         for view in self.views:
             logging.info(f"Processing {view.name}, filters and columns")
             self.write_view(view)
             logging.info("Finished")
         self.generate_release()
 
-    def write_dataset(self, dataset: Dataset) -> None:
-        conn = self.conn
-        dataset_db_id = self.next_id("dataset")
-        self._dataset_lookup[dataset.name] = dataset_db_id
-        conn.execute(
-            "INSERT INTO dataset (dataset_id, name) VALUES (?,?)",
-            (dataset_db_id, dataset.name),
-        )
-        if dataset.columns is None:
-            return
-        for column in dataset.columns:
-            column_db_id = self.next_id("column_def")
-            fullname = f"{dataset.name}-{column.name}"
-            sql = "INSERT INTO column_def (column_id, dataset_id, name, label, type, sortable, url, delimiter) VALUES (?,?,?,?,?,?,?,?)"  # noqa: E501
-            params = (
-                column_db_id,
-                dataset_db_id,
-                column.name,
-                column.label,
-                column.type,
-                column.sortable,
-                column.url,
-                column.delimiter,
-            )
-            conn.execute(sql, params)
-            self._column_lookup[fullname] = column_db_id
-
     def write_view(self, view: View) -> None:
         conn = self.conn
         view_db_id = self.next_id("view")
-        dataset_db_id = self._dataset_lookup[view.dataset]
 
-        # Define the view
+        # Define the view with source instead of dataset_id
         conn.execute(
-            "INSERT INTO view (view_id, id, name, url_name, dataset_id) VALUES (?,?,?,?,?)",  # noqa: E501
-            (view_db_id, view.id, view.name, view.url_name, dataset_db_id),
+            'INSERT INTO "view" (view_id, id, name, url_name, source) VALUES (?,?,?,?,?)',  # noqa: E501
+            (view_db_id, view.id, view.name, view.url_name, view.source),
         )
 
         # Write filter groups and their filters
@@ -95,7 +75,11 @@ class DatabaseConfig(BaseDatabase):
 
             for view_filter in group.filters:
                 view_filter_db_id = self.next_id("view_filter")
-                filter_sql = "INSERT INTO view_filter (view_filter_id, view_filter_group_id, id, label, filter_type, match_type, rank, min, max, query_columns) VALUES (?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
+                filter_sql = "INSERT INTO view_filter (view_filter_id, view_filter_group_id, id, label, filter_type, match_type, rank, min, max, query_columns, regex) VALUES (?,?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
+                # Serialize query_columns if it's a Pydantic model
+                qc = view_filter.query_columns
+                if qc is not None and hasattr(qc, "model_dump"):
+                    qc = qc.model_dump(exclude_none=True)
                 filter_params = (
                     view_filter_db_id,
                     group_db_id,
@@ -106,7 +90,8 @@ class DatabaseConfig(BaseDatabase):
                     view_filter.rank,
                     view_filter.min,
                     view_filter.max,
-                    view_filter.query_columns,
+                    qc,
+                    view_filter.regex,
                 )
                 conn.execute(filter_sql, filter_params)
                 if (
@@ -122,14 +107,20 @@ class DatabaseConfig(BaseDatabase):
                         )
                         conn.execute(value_sql, value_params)
 
-        # Write the columns for the view and link
+        # Write merged columns (column metadata + view association)
         for column in view.columns:
-            fullname = f"{view.dataset}-{column.name}"
-            column_id = self._column_lookup[fullname]
-            col_sql = "INSERT INTO view_column (view_id, column_id, rank, enable_by_default) VALUES (?,?,?,?)"  # noqa: E501
+            col_db_id = self.next_id("view_column")
+            col_sql = "INSERT INTO view_column (view_column_id, view_id, name, label, type, sortable, url, delimiter, hidden, rank, enable_by_default) VALUES (?,?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
             col_params = (
+                col_db_id,
                 view_db_id,
-                column_id,
+                column.name,
+                column.label,
+                column.type,
+                column.sortable,
+                column.url,
+                column.delimiter,
+                column.hidden,
                 column.rank,
                 column.enabled,
             )
@@ -138,23 +129,6 @@ class DatabaseConfig(BaseDatabase):
     def generate_release(self) -> None:
         sql = "INSERT INTO release (release_label, schema_version) VALUES (strftime(current_date(),'%Y-%m'), ?)"  # noqa: E501
         self.conn.execute(sql, (self.schema_version,))
-
-    def __init__(
-        self,
-        release_path: Path,
-        release: str,
-        datasets: list[Dataset],
-        views: list[View],
-        schema_version: str = schema_version,
-    ):
-        BaseDatabase.__init__(self, release_path, release)
-        self.datasets = datasets
-        self.views = views
-        self.schema_version = schema_version
-        self._dataset_lookup: dict[str, int] = {}
-        self._column_lookup: dict[str, int] = {}
-        self._view_lookup: dict[str, int] = {}
-        self.ids: dict[str, int] = {}
 
     def load_schema(self) -> None:
         conn = self.conn

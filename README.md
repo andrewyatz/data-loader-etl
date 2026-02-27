@@ -44,10 +44,10 @@ uv run python main.py -r example_v1 -c example/config.json -d example/data.json
 
 1. **Validate configurations** -- config and data JSON files are validated against their JSON schemas and parsed into Pydantic models
 2. **Transform datasets** -- source CSVs are loaded, filtered, and any generated columns are created
-3. **Process dataset metadata** -- column definitions are extracted per dataset, applying any overrides from the `columns` configuration (labels, types, visibility, sorting)
-4. **Precompute filter values** -- for `select_list` filters, distinct values and labels are computed from the dataset
-5. **Build configuration database** -- metadata tables (dataset, column_def, view, view_filter, view_filter_value, view_column, release) are written to DuckDB
-6. **Load data** -- transformed dataset CSVs are loaded into DuckDB as their own tables
+3. **Process dataset metadata** -- column names are extracted per dataset from the transformed parquet files
+4. **Precompute filter values** -- for `select_list` filters, distinct values and labels are computed from the dataset. Query column references are validated against the data source. Per-view column overrides are applied and columns are enriched with metadata
+5. **Build configuration database** -- metadata tables (view, view_column, view_filter_group, view_filter, view_filter_value, release) are written to DuckDB
+6. **Load data** -- transformed dataset parquet files are loaded into DuckDB as their own tables
 
 ## Configuration
 
@@ -95,42 +95,48 @@ uv run ruff check --fix etl/ tests/
 
 ```mermaid
 erDiagram
-    dataset {
-        INTEGER dataset_id PK
-        VARCHAR name UK
+    view {
+        INTEGER view_id PK
+        VARCHAR id UK
+        VARCHAR url_name UK
+        VARCHAR name
+        VARCHAR source
     }
 
-    column_def {
-        INTEGER column_id PK
-        INTEGER dataset_id FK
+    view_column {
+        INTEGER view_column_id PK
+        INTEGER view_id FK
         VARCHAR name
         VARCHAR label
         VARCHAR type
         BOOLEAN sortable
         VARCHAR url
         VARCHAR delimiter
+        BOOLEAN hidden
+        INTEGER rank
+        BOOLEAN enable_by_default
     }
 
-    view {
-        INTEGER view_id PK
-        VARCHAR id UK
-        VARCHAR url_name UK
-        VARCHAR name
-        INTEGER dataset_id FK
+    view_filter_group {
+        INTEGER view_filter_group_id PK
+        INTEGER view_id FK
+        VARCHAR id
+        VARCHAR label
+        INTEGER rank
     }
 
     view_filter {
         INTEGER view_filter_id PK
-        INTEGER view_id FK
+        INTEGER view_filter_group_id FK
         VARCHAR id UK
         VARCHAR label
         VARCHAR filter_type
         VARCHAR match_type
-        BOOLEAN is_primary
         INTEGER rank
         DOUBLE min
         DOUBLE max
         JSON query_columns
+        VARCHAR regex
     }
 
     view_filter_value {
@@ -139,27 +145,18 @@ erDiagram
         VARCHAR label
     }
 
-    view_column {
-        INTEGER view_id FK
-        INTEGER column_id FK
-        INTEGER rank
-        BOOLEAN enable_by_default
-    }
-
     release {
         VARCHAR release_label
         VARCHAR schema_version
     }
 
-    dataset ||--|{ column_def : dataset_id
-    dataset ||--|{ view : dataset_id
-    view ||--|{ view_filter : view_id
     view ||--|{ view_column : view_id
+    view ||--|{ view_filter_group : view_id
+    view_filter_group ||--|{ view_filter : view_filter_group_id
     view_filter ||--|{ view_filter_value : view_filter_id
-    column_def ||--|{ view_column : column_id
 ```
 
 The schema also includes two convenience views:
 
-- **filter_config** -- joins `view_filter`, `view`, and `dataset` to provide a denormalised view of all filter settings per view
-- **column_config** -- joins `view_column`, `view`, `dataset`, and `column_def` to provide a denormalised view of all column metadata per view
+- **filter_config** -- joins `view_filter`, `view_filter_group`, and `view` to provide a denormalised view of all filter settings per view
+- **column_config** -- joins `view_column` and `view` to provide a denormalised view of all column metadata per view

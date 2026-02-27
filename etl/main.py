@@ -96,7 +96,10 @@ def run_etl() -> None:
 
     print("Stage 3: Creating dataset configuration files")
     DatasetsProcessor(
-        datasets=datasets, release_path=release_path, columns=configs.columns
+        datasets=datasets,
+        views=configs.views,
+        columns=configs.columns,
+        release_path=release_path,
     ).run()
 
     print("Stage 4: Preconfiguring filter values")
@@ -104,11 +107,12 @@ def run_etl() -> None:
         views=configs.views,
         filters=configs.filters,
         datasets=datasets,
+        columns=configs.columns,
         release_path=release_path,
     ).run()
 
     print("Stage 5: Creating final DuckDB configurations")
-    with DatabaseConfig(release_path, cli.release, datasets, configs.views) as database:
+    with DatabaseConfig(release_path, cli.release, configs.views) as database:
         database.run()
 
     print("Stage 6: Copying data to DuckDB")

@@ -1,7 +1,9 @@
-view_id,column_id,rank,enable_by_default
-1,1,1,true
-1,2,2,true
-1,8,3,true
-1,3,4,true
-1,4,5,true
-1,7,6,true
+view_column_id,view_id,name,label,type,sortable,url,delimiter,hidden,rank,enable_by_default
+1,1,id,Id,link,false,https://www.domain.com/ID/{},,false,1,true
+2,1,class,Class,string,true,,,false,2,true
+3,1,gen_measurement,Measurement,string,false,,,false,3,true
+4,1,start,Start,string,true,,,false,4,true
+5,1,stop,Stop,string,true,,,false,5,true
+6,1,measurement,Measurement,string,true,,,true,6,true
+7,1,unit,Unit,string,true,,,true,7,true
+8,1,random,Random,string,true,,,false,8,true

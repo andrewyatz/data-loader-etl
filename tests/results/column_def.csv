@@ -1,9 +1,0 @@
-column_id,dataset_id,name,label,type,sortable,url,delimiter
-1,1,id,Id,link,false,https://www.domain.com/ID/{},
-2,1,class,Class,string,true,,
-3,1,start,Start,string,true,,
-4,1,stop,Stop,string,true,,
-5,1,measurement,Measurement,string,true,,
-6,1,unit,Unit,string,true,,
-7,1,random,Random,string,true,,
-8,1,gen_measurement,Measurement,string,false,,

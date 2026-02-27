@@ -1,7 +1,7 @@
 {
     "filters": [
         {
-            "id" : "id", 
+            "id" : "id",
             "label": "ID",
             "type": "select_in",
             "match": "exact"
@@ -48,14 +48,16 @@
                 "end": "region_end",
                 "strand": "strand",
                 "bin": "_bin"
-            }
+            },
+            "regex": "(?P<region>[^:]+):(?P<start>\\d+)-(?P<end>\\d+):?(?P<strand>[+-])?"
         }
     ],
     "views": [
         {
+            "id": "genes",
             "url_name": "genes",
             "name": "Genes",
-            "dataset": "genes",
+            "source": "genes",
             "include_remaining_columns": true,
             "filters": [
                 {

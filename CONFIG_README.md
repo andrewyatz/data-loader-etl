@@ -35,7 +35,7 @@ A shared collection of filter definitions referenced by views. Each filter's `id
 | `select_in` | `exact` (required) | `query_columns` (optional) | Specify multiple values to search by. Only exact matching is supported |
 | `list_contains` | N/A | `query_columns` (optional) | Perform a `LIST_CONTAINS` function to find elements within an array column |
 | `range` | N/A | `min`, `max` (optional), `query_columns` (optional) | Range query using `BETWEEN`. Specify `min` or `max` to override computed bounds |
-| `location` | N/A | `query_columns` (required) | Genomic coordinate overlap query. See [location filters](#location-filters) below |
+| `location` | N/A | `query_columns` (required), `regex` (required) | Genomic coordinate overlap query. See [location filters](#location-filters) below |
 
 #### `query_columns`
 
@@ -49,9 +49,11 @@ For most filter types, `query_columns` is optional and takes a single key:
 
 Use this when the filter `id` differs from the column name you want to query. If omitted, the filter `id` is used as the column name.
 
+When `query_columns` is explicitly provided, the ETL validates that the referenced columns exist in the data source.
+
 #### Location filters
 
-Location filters perform genomic-style coordinate overlap queries across multiple columns. The `query_columns` attribute is required and maps semantic roles to actual column names in the dataset:
+Location filters perform genomic-style coordinate overlap queries across multiple columns. The `query_columns` attribute is required and maps semantic roles to actual column names in the dataset. The `regex` attribute is also required and provides a regular expression with named capture groups for downstream consumers to parse location query strings.
 
 ```json
 {
@@ -64,7 +66,8 @@ Location filters perform genomic-style coordinate overlap queries across multipl
         "end": "region_end",
         "strand": "strand",
         "bin": "_bin"
-    }
+    },
+    "regex": "(?P<region>[^:]+):(?P<start>\\d+)-(?P<end>\\d+)"
 }
 ```
 
@@ -78,6 +81,8 @@ Location filters perform genomic-style coordinate overlap queries across multipl
 
 The query finds overlapping features where the feature start is <= the query end and the feature end is >= the query start. If `bin` is provided, it is used to optimise the query using UCSC extended binning. If `strand` is provided and a strand value is given in the query, it will also filter by strand.
 
+The `regex` field should use named capture groups matching the `query_columns` roles (except `bin`). Downstream consumers use this regex to parse location query strings into their component parts. The regex is stored as a separate column on `view_filter` in the database.
+
 ### `views`
 
 ```json
@@ -86,7 +91,7 @@ The query finds overlapping features where the feature start is <= the query end
         "id": "view_one",
         "url_name": "url",
         "name": "View One",
-        "dataset": "dataset_name",
+        "source": "dataset_name",
         "include_remaining_columns": true,
         "filters": [
             { "filter_id": "column_one" },
@@ -108,15 +113,15 @@ The query finds overlapping features where the feature start is <= the query end
 ]
 ```
 
-Views configure what is presented to the user and differentiate content from the underlying dataset.
+Views configure what is presented to the user and differentiate content from the underlying data source.
 
 | Attribute | Required | Description |
 |-----------|----------|-------------|
 | `id` | Yes | Unique identifier for this view |
 | `url_name` | Yes | URL path segment for this view |
 | `name` | Yes | Display name shown in the interface |
-| `dataset` | Yes | Which dataset this view queries |
-| `include_remaining_columns` | No | If `true`, append all remaining dataset columns not listed in `columns` with visibility off by default. Defaults to `false` |
+| `source` | Yes | Name of the data source (dataset) this view queries |
+| `include_remaining_columns` | No | If `true`, append all remaining source columns not listed in `columns`. Defaults to `false` |
 | `filters` | Yes | References to filters from the top-level `filters` array |
 | `columns` | Yes | Columns to display, ordered by display rank (position in list determines order) |
 
@@ -168,14 +173,14 @@ Columns are listed in display order. Position in the list determines rank (first
 
 | Attribute | Required | Description |
 |-----------|----------|-------------|
-| `name` | Yes | Column name from the dataset |
+| `name` | Yes | Column name from the data source |
 | `enabled` | No | If `true`, column is visible by default. Defaults to `true` |
 
 ### `columns`
 
 ```json
 "columns": {
-    "dataset_name": {
+    "view_id": {
         "column_name": {
             "sortable": false,
             "type": "link",
@@ -183,25 +188,25 @@ Columns are listed in display order. Position in the list determines rank (first
         },
         "another": { ... }
     },
-    "second_dataset_name": {
+    "another_view_id": {
         ...
     }
 }
 ```
 
-Column overrides are specified per-dataset outside of the view and control:
+Column overrides are specified per-view and control:
 
 - If you are allowed to sort on the column
 - The type of column data represented
 - Additional attributes to help rendering
 - Custom labels
-- If the column should be hidden from display
+- If the column should be hidden from direct querying and display
 
 | Attribute | Data type | Notes |
 |-----------|-----------|-------|
 | `label` | `string` | Custom label for the column. Use to override the default generated display name |
 | `sortable` | `boolean` | Indicates if sorting is allowed on this column |
-| `hidden` | `boolean` | Indicates if the column should be excluded from the interface entirely |
+| `hidden` | `boolean` | If true, column is recorded in the database but excluded from direct querying and display in the interface. The column remains available to the query engine for operations such as location filtering |
 | `type` | `string` | Link rendering type. Supported types are `link`, `array-link`, `labelled-link` |
 | `url` | `string` | URL template used with `link` and `array-link` types. Format is `scheme://domain/path/{}` where `{}` is substituted with the cell's content. Required when `type` is `link` or `array-link` |
 | `delimiter` | `string` | Delimiter for splitting values when using the `array-link` type. Required when `type` is `array-link` |

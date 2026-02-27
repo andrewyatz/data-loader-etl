@@ -18,7 +18,7 @@
     },
     "columns": {
       "type": "object",
-      "description": "Per-dataset column overrides. Keys are dataset names.",
+      "description": "Per-view column overrides. Keys are view ids.",
       "additionalProperties": {
         "type": "object",
         "description": "Column overrides keyed by column name",
@@ -66,6 +66,10 @@
         "query_columns": {
           "type": "object",
           "description": "Specifies which columns to query. For single-column filters use {\"column\": \"name\"} to override the default (filter id). For location filters, maps semantic roles to column names."
+        },
+        "regex": {
+          "type": "string",
+          "description": "Regular expression with named capture groups matching query_columns roles (region, start, end, optionally strand). Required for location filters. Used by downstream consumers to parse location query strings."
         }
       },
       "additionalProperties": false,
@@ -84,7 +88,8 @@
               "anyOf": [
                 { "required": ["match"] },
                 { "required": ["min"] },
-                { "required": ["max"] }
+                { "required": ["max"] },
+                { "required": ["regex"] }
               ]
             }
           }
@@ -103,7 +108,8 @@
               "anyOf": [
                 { "required": ["filter_labels"] },
                 { "required": ["min"] },
-                { "required": ["max"] }
+                { "required": ["max"] },
+                { "required": ["regex"] }
               ]
             }
           }
@@ -123,7 +129,8 @@
               "anyOf": [
                 { "required": ["filter_labels"] },
                 { "required": ["min"] },
-                { "required": ["max"] }
+                { "required": ["max"] },
+                { "required": ["regex"] }
               ]
             }
           }
@@ -142,7 +149,8 @@
                 { "required": ["match"] },
                 { "required": ["filter_labels"] },
                 { "required": ["min"] },
-                { "required": ["max"] }
+                { "required": ["max"] },
+                { "required": ["regex"] }
               ]
             }
           }
@@ -159,7 +167,8 @@
             "not": {
               "anyOf": [
                 { "required": ["match"] },
-                { "required": ["filter_labels"] }
+                { "required": ["filter_labels"] },
+                { "required": ["regex"] }
               ]
             }
           }
@@ -170,7 +179,7 @@
             "required": ["type"]
           },
           "then": {
-            "required": ["query_columns"],
+            "required": ["query_columns", "regex"],
             "properties": {
               "query_columns": { "$ref": "#/$defs/location_query_columns" }
             },
@@ -231,7 +240,7 @@
 
     "view": {
       "type": "object",
-      "required": ["url_name", "id", "name", "dataset", "filters", "columns"],
+      "required": ["url_name", "id", "name", "source", "filters", "columns"],
       "properties": {
         "id" : {
           "type": "string",
@@ -245,13 +254,13 @@
           "type": "string",
           "description": "Display name for this view"
         },
-        "dataset": {
+        "source": {
           "type": "string",
-          "description": "Which dataset this view queries"
+          "description": "Name of the data source (dataset) this view queries"
         },
         "include_remaining_columns": {
           "type": "boolean",
-          "description": "If true, append all remaining dataset columns not listed in columns",
+          "description": "If true, append all remaining source columns not listed in columns",
           "default": false
         },
         "filters": {
@@ -314,7 +323,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Column name from the dataset"
+          "description": "Column name from the data source"
         },
         "enabled": {
           "type": "boolean",
@@ -338,7 +347,7 @@
         },
         "hidden": {
           "type": "boolean",
-          "description": "If true, column is excluded from the interface entirely"
+          "description": "If true, column is recorded in the database but excluded from direct querying and display in the interface. The column remains available to the query engine."
         },
         "type": {
           "type": "string",

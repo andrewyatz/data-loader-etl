@@ -47,8 +47,6 @@ def test_run_etl(
 
     # Now assert the ancillary tables
     remaining_tables = [
-        "dataset",
-        "column_def",
         "view",
         "view_column",
         "view_filter_group",
