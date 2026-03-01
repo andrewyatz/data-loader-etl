@@ -1,0 +1,13 @@
+[
+    {
+        "name": "test",
+        "path": "example/example.csv",
+        // Generated columns using SQL expressions
+        "create_columns": [
+            {
+                "name": "gen_measurement",
+                "command": "TRIM(CONCAT(measurement, ' ', unit))",
+            },
+        ],
+    },
+]

@@ -1,5 +1,19 @@
 # Configuration files
 
+## Supported file formats
+
+Both config and data files can be written in JSON, JSON5, or YAML. The file extension determines the parser used:
+
+| Format | Extensions | Notes |
+|--------|-----------|-------|
+| JSON | `.json` | Standard JSON. Parsed by the JSON5 parser, so comments and trailing commas are accepted even in `.json` files |
+| JSON5 | `.json5` | Superset of JSON. Supports `//` and `/* */` comments, trailing commas, unquoted keys, and more |
+| YAML | `.yml`, `.yaml` | Requires the optional `pyyaml` dependency (`uv sync --extra yaml`) |
+
+JSON Schema validation files in `schema/` are always plain JSON and are not affected by this.
+
+All inline examples in this document use JSON syntax as the universal baseline.
+
 ## `config.json`
 
 ### `filters`

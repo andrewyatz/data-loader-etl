@@ -1,0 +1,112 @@
+# Filter definitions
+# Each filter defines a UI control for querying the dataset
+filters:
+  - id: id
+    label: ID
+    type: select_in
+    match: exact
+
+  - id: species
+    label: Species
+    type: select
+    match: exact
+
+  # Maps to a different column than the filter id
+  - id: accession_search
+    label: Genome accession
+    type: select
+    match: prefix
+    query_columns:
+      column: genome_accession
+
+  - id: biotype
+    label: Biotype
+    type: select_list
+    # SQL expression applied to the column for display labels
+    filter_labels: "upper(biotype)"
+
+  - id: taxonomy_ancestor
+    label: Taxonomy ancestor
+    type: list_contains
+
+  - id: transcript_count
+    label: Transcript count
+    type: range
+    min: 0
+
+  # Location filter with named capture groups
+  # regex must contain named groups matching query_columns roles (except bin)
+  - id: gen_location
+    label: Genomic Location
+    type: location
+    query_columns:
+      region: region
+      start: region_start
+      end: region_end
+      strand: strand
+      bin: _bin
+    #Translates chr1:10000-10000000:+ into the region, start, end and strand. Strand is optional
+    regex: '(?P<region>[^:]+):(?P<start>\d+)-(?P<end>\d+):?(?P<strand>[+-])?'
+
+# View definitions
+views:
+  - id: genes
+    url_name: genes
+    name: Genes
+    source: genes
+    include_remaining_columns: true
+    filters:
+      - group_id: gene_properties
+        group_label: Gene Properties
+        filters:
+          - filter_id: id
+          - filter_id: species
+          - filter_id: taxonomy_ancestor
+          - filter_id: transcript_count
+
+      - group_id: coordinates
+        group_label: Coordinates
+        filters:
+          - filter_id: accession_search
+          - filter_id: gen_location
+
+      # Standalone filter (auto-wrapped into its own group)
+      - filter_id: biotype
+
+    columns:
+      - name: id
+        enabled: true
+      - name: species
+      - name: genome_accession
+      - name: gen_location
+      - name: biotype
+      - name: transcript_count
+      - name: publications
+
+# Per-view column overrides
+# Keys are view IDs, values are column name -> override mappings
+columns:
+  genes:
+    id:
+      sortable: false
+      label: ID
+      type: link
+      url: "https://resolver.ensembl.org/id/{}"
+    genome_accession:
+      sortable: false
+      type: link
+      url: "https://www.ebi.ac.uk/ena/browser/view/{}"
+    gen_evidence_accession:
+      label: Evidence accession
+      sortable: false
+      type: labelled-link
+    publications:
+      sortable: false
+      type: array-link
+      delimiter: ";"
+      url: "https://europepmc.org/article/MED/{}"
+    # Hidden columns are recorded in the DB but not displayed in the UI.
+    # They remain available to the query engine (e.g. for location filtering).
+    _bin:
+      label: UCSC binning index
+      hidden: true

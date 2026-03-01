@@ -1,0 +1,45 @@
+# Filter definitions
+filters:
+  - id: id
+    label: ID
+    type: select
+    match: exact
+
+  - id: class
+    label: Class
+    type: select_list
+    # SQL expression applied to the column for display labels
+    filter_labels: "lower(class)"
+
+# View definitions
+views:
+  - id: test_view
+    name: Test data set
+    source: test
+    url_name: test
+    include_remaining_columns: true
+    filters:
+      - filter_id: id
+      - filter_id: class
+    columns:
+      - name: id
+        enabled: true
+      - name: class
+      - name: stop
+
+# Per-view column overrides (keyed by view id)
+columns:
+  test_view:
+    id:
+      sortable: false
+      label: ID
+      type: link
+      url: "https://www.domain.com/ID/{}"
+    gen_measurement:
+      label: Measurement
+      sortable: false
+    # Hidden columns are recorded in the DB but not displayed
+    measurement:
+      hidden: true
+    unit:
+      hidden: true

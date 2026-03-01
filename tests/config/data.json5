@@ -1,0 +1,13 @@
+[
+    {
+        "name": "test",
+        // Path is replaced at runtime by the test fixture
+        "path": "<<REPLACED_WITH_PATH_AT_RUNTIME>>",
+        "create_columns": [
+            {
+                "name": "gen_measurement",
+                "command": "TRIM(CONCAT(measurement, ' ', unit))",
+            },
+        ],
+    },
+]

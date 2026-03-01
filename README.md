@@ -28,21 +28,40 @@ usage: main.py [-h] -r RELEASE -c CONFIG -d DATA [--schema SCHEMA] [-f] [-v]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `-r`, `--release` | Yes | Release name (used as the output directory and database name) |
-| `-c`, `--config` | Yes | JSON (or YAML) file describing views, filters, and column overrides |
-| `-d`, `--data` | Yes | JSON (or YAML) file describing datasets and their source CSVs |
+| `-c`, `--config` | Yes | Configuration file (JSON, JSON5, or YAML) defining views, filters, and column overrides |
+| `-d`, `--data` | Yes | Data source file (JSON, JSON5, or YAML) detailing datasets |
 | `--schema` | No | Directory containing JSON Schema files for validation. Defaults to `schema/` |
 | `-f`, `--force` | No | Overwrite an existing release directory if present |
 | `-v`, `--verbose` | No | Enable debug-level logging |
 
-### Example
+### Supported file formats
+
+Configuration and data files can be written in any of the following formats:
+
+| Format | Extensions | Notes |
+|--------|-----------|-------|
+| JSON | `.json` | Standard JSON |
+| JSON5 | `.json`, `.json5` | JSON with comments (`//`, `/* */`) and trailing commas. Any valid JSON is valid JSON5 |
+| YAML | `.yml`, `.yaml` | Requires the optional `pyyaml` dependency (`uv sync --extra yaml`) |
+
+JSON Schema validation files (`schema/`) are always plain JSON and are not affected by this setting.
+
+### Examples
 
 ```bash
+# Using JSON
 uv run python main.py -r example_v1 -c example/config.json -d example/data.json
+
+# Using JSON5 (supports comments and trailing commas)
+uv run python main.py -r example_v1 -c example/config.json5 -d example/data.json5
+
+# Using YAML (requires: uv sync --extra yaml)
+uv run python main.py -r example_v1 -c example/config.yaml -d example/data.yaml
 ```
 
 ## Pipeline stages
 
-1. **Validate configurations** -- config and data JSON files are validated against their JSON schemas and parsed into Pydantic models
+1. **Validate configurations** -- config and data files are validated against their JSON schemas and parsed into Pydantic models
 2. **Transform datasets** -- source CSVs are loaded, filtered, and any generated columns are created
 3. **Process dataset metadata** -- column names are extracted per dataset from the transformed parquet files
 4. **Precompute filter values** -- for `select_list` filters, distinct values and labels are computed from the dataset. Query column references are validated against the data source. Per-view column overrides are applied and columns are enriched with metadata
@@ -51,7 +70,7 @@ uv run python main.py -r example_v1 -c example/config.json -d example/data.json
 
 ## Configuration
 
-See [CONFIG_README.md](CONFIG_README.md) for full documentation of `config.json` and `data.json`.
+See [CONFIG_README.md](CONFIG_README.md) for full documentation of configuration and data files.
 
 ## Development
 

@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-DESCRIPTION = "Tool for generating AMR filter data"
+DESCRIPTION = "Tool for generating data portal release databases"
 
 
 def get_cli_args() -> argparse.ArgumentParser:
@@ -16,14 +16,14 @@ def get_cli_args() -> argparse.ArgumentParser:
         "-c",
         "--config",
         required=True,
-        help="A JSON file that defines the filter categories and views",
+        help="Configuration file (JSON, JSON5, or YAML) defining views, filters, and column overrides",
     )
 
     cli.add_argument(
         "-d",
         "--data",
         required=True,
-        help="A JSON file detailing data sources",
+        help="Data source file (JSON, JSON5, or YAML) detailing datasets",
     )
 
     cli.add_argument(

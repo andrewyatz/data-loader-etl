@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import json5
+
 try:
     import yaml
 except ImportError:
@@ -38,15 +40,21 @@ def create_release(release: str, overwrite: bool = False) -> Path:
 
 def load_data(path: str | Path) -> Any:
     path_obj = Path(path)
+    suffix = path_obj.suffix.lower()
     with open(path_obj, "r") as fh:
-        if path_obj.suffix in (".yml", ".yaml"):
+        if suffix in (".yml", ".yaml"):
             if yaml is None:
-                raise ImportError("PyYAML is required to load YAML files")
+                raise ImportError(
+                    "PyYAML is required to load YAML files. "
+                    "Install with: uv sync --extra yaml"
+                )
             return yaml.safe_load(fh)
-        elif path_obj.suffix == ".json":
-            return json.load(fh)
+        elif suffix in (".json", ".json5"):
+            return json5.load(fh)
         else:
-            raise ValueError("Unsupported file format. Use .json or .yml/.yaml")
+            raise ValueError(
+                "Unsupported file format. Use .json, .json5, .yml, or .yaml"
+            )
 
 
 def validate_configs(config: Any, data: Any, schemas: str) -> None:
