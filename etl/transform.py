@@ -40,8 +40,8 @@ class Transform:
             dataset_cols = ["*"]
             # add additional columns as needed
             for column_definition in dataset.create_columns:
-                logger.info(
-                    f"Creating new column from '{column_definition.command}' as '{column_definition.name}"  # noqa: E501
+                logger.debug(
+                    f"Creating new column from '{column_definition.command}' as '{column_definition.name}'"  # noqa: E501
                 )
                 dataset_cols.append(
                     f"{column_definition.command} AS {column_definition.name}"

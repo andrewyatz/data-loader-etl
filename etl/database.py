@@ -76,14 +76,19 @@ class DatabaseConfig(BaseDatabase):
             for view_filter in group.filters:
                 view_filter_db_id = self.next_id("view_filter")
                 filter_sql = "INSERT INTO view_filter (view_filter_id, view_filter_group_id, id, label, filter_type, match_type, rank, min, max, query_columns, regex) VALUES (?,?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
-                # Serialize query_columns if it's a Pydantic model
+                # Generate a unique DB id by prefixing with the view id
+                db_filter_id = f"{view.id}_{view_filter.filter_id}"
+                # Ensure query_columns is always set so the backend can
+                # resolve the actual data column from the unique DB id
                 qc = view_filter.query_columns
-                if qc is not None and hasattr(qc, "model_dump"):
+                if qc is None:
+                    qc = {"column": view_filter.filter_id}
+                elif hasattr(qc, "model_dump"):
                     qc = qc.model_dump(exclude_none=True)
                 filter_params = (
                     view_filter_db_id,
                     group_db_id,
-                    view_filter.filter_id,
+                    db_filter_id,
                     view_filter.label,
                     view_filter.type,
                     view_filter.match,

@@ -72,5 +72,13 @@ def _assert_table(results_dir, con, table_name, numeric_cols=[]):
         expected[col] = pd.to_numeric(expected[col])
         actual[col] = pd.to_numeric(actual[col])
     for col in actual.columns:
-        actual[col] = actual[col].astype(expected[col].dtype)
+        if actual[col].dtype != expected[col].dtype:
+            try:
+                actual[col] = actual[col].astype(expected[col].dtype)
+            except (ValueError, TypeError):
+                # If we have a JSON string or similar in actual that can't be cast to expected's type
+                # (usually float/NaN), we check if the expected column is empty.
+                if expected[col].isna().all():
+                    # If expected is all NaNs, cast it to object to match the actual data type
+                    expected[col] = expected[col].astype(actual[col].dtype)
     assert_frame_equal(actual, expected, check_dtype=False)
