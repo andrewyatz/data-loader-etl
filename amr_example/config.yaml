@@ -1,0 +1,281 @@
+# AMR Portal - data-loader-etl configuration
+# Filter definitions are shared across views. The ETL auto-generates unique
+# DB IDs per view (e.g. phenotypes_antibiotic_name) and sets query_columns
+# automatically when writing to DuckDB.
+
+# Shared filter definitions
+filters:
+  - id: antibiotic_name
+    label: Antibiotic
+    type: select_list
+    filter_labels: "lower(antibiotic_name)"
+
+  - id: genus
+    label: Genus
+    type: select_list
+    filter_labels: "genus"
+
+  - id: species
+    label: Species
+    type: select_list
+    filter_labels: "trim(species)"
+
+  - id: resistance_phenotype
+    label: Resistance phenotype
+    type: select_list
+    filter_labels: "resistance_phenotype"
+
+  - id: isolation_source_category
+    label: Isolation source category
+    type: select_list
+    filter_labels: "isolation_source_category"
+
+  - id: laboratory_typing_method
+    label: Testing method
+    type: select_list
+    filter_labels: "laboratory_typing_method"
+
+  - id: collection_year
+    label: Collection year
+    type: select_list
+    filter_labels: "collection_year"
+
+  - id: geographical_subregion
+    label: Geographical subregion
+    type: select_list
+    filter_labels: "geographical_subregion"
+
+  - id: country
+    label: Country
+    type: select_list
+    filter_labels: "country"
+
+# View definitions
+views:
+  - id: phenotypes
+    url_name: experiments
+    name: AMR phenotypes
+    source: phenotype
+    include_remaining_columns: true
+    filters:
+      - filter_id: antibiotic_name
+      - filter_id: species
+      - filter_id: genus
+      - filter_id: resistance_phenotype
+      - filter_id: isolation_source_category
+      - filter_id: laboratory_typing_method
+      - filter_id: collection_year
+      - filter_id: geographical_subregion
+      - filter_id: country
+    columns:
+      - name: antibiotic_name
+      - name: resistance_phenotype
+      - name: gen_measurement
+      - name: ast_standard
+      - name: laboratory_typing_method
+      - name: platform
+      - name: BioSample_ID
+      - name: assembly_ID
+      - name: genus
+      - name: species
+      - name: organism
+      - name: host
+      - name: SRA_accession
+      - name: gen_antibiotic_ontology
+
+  - id: genotypes
+    url_name: predictions
+    name: AMR genotypes
+    source: genotype
+    include_remaining_columns: true
+    filters:
+      - filter_id: antibiotic_name
+      - filter_id: species
+      - filter_id: genus
+    columns:
+      - name: BioSample_ID
+      - name: assembly_ID
+      - name: genus
+      - name: species
+      - name: organism
+      - name: taxon_id
+      - name: region
+      - name: region_start
+      - name: region_end
+      - name: strand
+      - name: id
+      - name: gene_symbol
+      - name: amr_element_symbol
+      - name: element_type
+      - name: element_subtype
+      - name: class
+      - name: subclass
+      - name: antibiotic_name
+      - name: gen_antibiotic_ontology
+      - name: gen_evidence_accession
+      - name: evidence_type
+      - name: evidence_description
+      - name: gen_annotation_link
+
+  - id: combined
+    url_name: combined
+    name: Combined phenotypes and genotypes
+    source: pheno_geno_merged
+    include_remaining_columns: true
+    filters:
+      - filter_id: antibiotic_name
+      - filter_id: species
+      - filter_id: genus
+      - filter_id: resistance_phenotype
+      - filter_id: isolation_source_category
+      - filter_id: laboratory_typing_method
+      - filter_id: collection_year
+      - filter_id: geographical_subregion
+      - filter_id: country
+    columns:
+      - name: antibiotic_name
+      - name: resistance_phenotype
+      - name: gen_measurement
+      - name: BioSample_ID
+      - name: assembly_ID
+      - name: genus
+      - name: species
+      - name: organism
+      - name: taxon_id
+      - name: host
+      - name: SRA_accession
+      - name: laboratory_typing_method
+      - name: platform
+      - name: ast_standard
+      - name: gen_antibiotic_ontology
+      - name: region
+      - name: region_start
+      - name: region_end
+      - name: strand
+      - name: id
+      - name: gene_symbol
+      - name: amr_element_symbol
+      - name: element_type
+      - name: element_subtype
+      - name: class
+      - name: subclass
+      - name: gen_evidence_accession
+      - name: evidence_type
+      - name: evidence_description
+      - name: gen_annotation_link
+
+# Per-view column overrides
+columns:
+  phenotypes:
+    assembly_ID:
+      sortable: false
+      type: link
+      url: "https://www.ebi.ac.uk/ena/browser/view/{}"
+    BioSample_ID:
+      type: link
+      url: "https://www.ebi.ac.uk/biosamples/samples/{}"
+    AMR_associated_publications:
+      sortable: false
+      type: array-link
+      delimiter: ";"
+      url: "https://europepmc.org/article/MED/{}"
+    database:
+      label: Source
+    gen_measurement:
+      label: Measurement
+      sortable: false
+    gen_antibiotic_ontology:
+      sortable: false
+      label: Antibiotic ontology
+      type: labelled-link
+    measurement_sign:
+      hidden: true
+    measurement:
+      hidden: true
+    measurement_units:
+      hidden: true
+    antibiotic_ontology:
+      hidden: true
+    antibiotic_ontology_link:
+      hidden: true
+    ISO_country_code:
+      hidden: true
+
+  genotypes:
+    assembly_ID:
+      sortable: false
+      type: link
+      url: "https://www.ebi.ac.uk/ena/browser/view/{}"
+    BioSample_ID:
+      type: link
+      url: "https://www.ebi.ac.uk/biosamples/samples/{}"
+    antibiotic_ontology:
+      hidden: true
+    evidence_accession:
+      hidden: true
+    gen_antibiotic_ontology:
+      label: Antibiotic ontology
+      sortable: false
+      type: labelled-link
+    gen_evidence_accession:
+      label: Evidence accession
+      sortable: false
+      type: labelled-link
+    gen_annotation_link:
+      label: Annotation download
+      sortable: false
+      type: labelled-link
+    evidence_link:
+      hidden: true
+    antibiotic_ontology_link:
+      hidden: true
+    _bin:
+      label: UCSC binning index
+      hidden: true
+
+  combined:
+    assembly_ID:
+      sortable: false
+      type: link
+      url: "https://www.ebi.ac.uk/ena/browser/view/{}"
+    BioSample_ID:
+      type: link
+      url: "https://www.ebi.ac.uk/biosamples/samples/{}"
+    AMR_associated_publications:
+      sortable: false
+      type: array-link
+      delimiter: ";"
+      url: "https://europepmc.org/article/MED/{}"
+    database:
+      label: Source
+    gen_measurement:
+      label: Measurement
+      sortable: false
+    gen_antibiotic_ontology:
+      sortable: false
+      label: Antibiotic ontology
+      type: labelled-link
+    gen_annotation_link:
+      label: Annotation download
+      sortable: false
+      type: labelled-link
+    measurement_sign:
+      hidden: true
+    measurement:
+      hidden: true
+    measurement_units:
+      hidden: true
+    antibiotic_ontology:
+      hidden: true
+    antibiotic_ontology_link:
+      hidden: true
+    evidence_accession:
+      hidden: true
+    gen_evidence_accession:
+      label: Evidence accession
+      sortable: false
+      type: labelled-link
+    evidence_link:
+      hidden: true
+    ISO_country_code:
+      hidden: true

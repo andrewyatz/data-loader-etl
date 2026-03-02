@@ -1,0 +1,12 @@
+# AMR Portal - local test data using pre-built parquet files
+# These parquet files already have the computed columns (gen_measurement, etc.)
+# so no create_columns are needed.
+
+- name: phenotype
+  path: /data/path/phenotype.parquet
+
+- name: genotype
+  path: /data/path/genotype.parquet
+
+- name: pheno_geno_merged
+  path: /data/path/pheno_geno_merged.parquet
