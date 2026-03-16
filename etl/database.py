@@ -113,9 +113,10 @@ class DatabaseConfig(BaseDatabase):
                         conn.execute(value_sql, value_params)
 
         # Write merged columns (column metadata + view association)
+        col_index = 0
         for column in view.columns:
             col_db_id = self.next_id("view_column")
-            col_sql = "INSERT INTO view_column (view_column_id, view_id, name, label, type, sortable, url, delimiter, hidden, rank, enable_by_default) VALUES (?,?,?,?,?,?,?,?,?,?,?)"  # noqa: E501
+            col_sql = "INSERT INTO view_column (view_column_id, view_id, name, label, type, sortable, url, delimiter, hidden, rank, enable_by_default, mask) VALUES (?,?,?,?,?,?,?,?,?,?,?, col_mask(?))"  # noqa: E501
             col_params = (
                 col_db_id,
                 view_db_id,
@@ -128,7 +129,9 @@ class DatabaseConfig(BaseDatabase):
                 column.hidden,
                 column.rank,
                 column.enabled,
+                col_index
             )
+            col_index += 1
             conn.execute(col_sql, col_params)
 
     def generate_release(self) -> None:

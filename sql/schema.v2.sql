@@ -56,6 +56,7 @@ CREATE TABLE view_column (
     "delimiter" VARCHAR,
     hidden BOOLEAN NOT NULL DEFAULT false,
     rank INTEGER NOT NULL,
+    mask UINT32 NOT NULL,
     enable_by_default BOOLEAN NOT NULL DEFAULT true,
     FOREIGN KEY (view_id) REFERENCES "view"(view_id),
     UNIQUE (view_id, "name")
@@ -112,3 +113,48 @@ SELECT
 FROM view_column vc
     JOIN "view" v ON vc.view_id = v.view_id
 ORDER BY v.view_id, vc.rank;
+
+
+-- Macros
+CREATE MACRO mask_set(i) AS floor(i / 28); -- used to generate bit mask set
+CREATE MACRO col_mask(i)  AS (mask_set(i)::UINT32 << 28) + (1 << (i - (mask_set(i) * 28))::UINT32); -- convert a index into a mask
+CREATE MACRO get_view_columns(view_source, target_mask) AS -- returns a list of columns based on a mask
+(
+  SELECT list(vc."name" ORDER BY vc.rank ASC) from view_column as vc JOIN "view" as v on v.view_id = vc.view_id
+  where target_mask::UINT32 & vc.mask and v."source" = view_source
+);
+CREATE OR REPLACE MACRO get_view_default_columns(view_source) AS -- returns a list of default columns
+(
+  SELECT list(vc."name" ORDER BY vc.rank ASC) from view_column as vc JOIN "view" as v on v.view_id = vc.view_id
+  where vc.enable_by_default and v."source" = view_source
+);
+CREATE OR REPLACE MACRO get_view_default_column_masks(view_source) AS -- returns a list of column masks
+(
+  SELECT list(vc.mask ORDER BY vc.rank ASC) from view_column as vc JOIN "view" as v on v.view_id = vc.view_id
+  where vc.enable_by_default and v."source" = view_source
+);
+
+-- filter marcos
+CREATE MACRO select_list_filter(table_name, column_name, in_list) AS TABLE(
+    SELECT *
+    FROM query_table(table_name)
+    WHERE COLUMNS(column_name) in in_list
+);
+
+CREATE OR REPLACE MACRO select_exact_filter(table_name, column_name, selected_value) AS TABLE(
+    SELECT *
+    FROM query_table(table_name)
+    WHERE COLUMNS(column_name) = selected_value
+);
+
+CREATE OR REPLACE MACRO select_prefix_filter(table_name, column_name, selected_value) AS TABLE(
+    SELECT *
+    FROM query_table(table_name)
+    WHERE COLUMNS(column_name) LIKE concat(selected_value,'%')
+);
+
+CREATE OR REPLACE MACRO range_filter(table_name, column_name, range_start, range_end) AS TABLE(
+    SELECT *
+    FROM query_table(table_name)
+    WHERE COLUMNS(column_name)::int between range_start and range_end
+);
